@@ -1,90 +1,117 @@
-import Image from "next/image";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/login/actions";
+import Link from "next/link";
+import { requireViewer } from "@/lib/viewer";
+import { loadDashboardData } from "./data";
+import { currentMonthKey, formatMonthLabel } from "@/lib/months";
+import { formatCurrency, formatPercent, pctOf } from "@/lib/format";
+import { UnitCards } from "./_components/unit-cards";
+import { RankingSection } from "./_components/ranking-section";
+import { CampaignSection } from "./_components/campaign-section";
 
-export default async function PainelPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default async function PainelPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string; unidade?: string; categoria?: string }>;
+}) {
+  const sp = await searchParams;
+  const monthKey = sp.mes ?? currentMonthKey();
+  const selectedUnitId = sp.unidade ?? null;
+  const selectedCategoryId = sp.categoria ?? "all";
 
-  if (!user) redirect("/login");
+  const viewer = await requireViewer();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role_label, is_admin, all_units")
-    .eq("id", user.id)
-    .single();
+  if (!viewer.hasProfile) {
+    return (
+      <div className="rounded-lg border border-terracotta/40 bg-terracotta/10 p-6 text-sm text-ink">
+        Sua conta foi autenticada, mas ainda não tem um perfil cadastrado no sistema. Peça a um
+        administrador para vincular seu acesso.
+      </div>
+    );
+  }
 
-  const { data: units } = await supabase
-    .from("units")
-    .select("id, name, location")
-    .order("name");
+  const data = await loadDashboardData(monthKey, viewer.units);
+
+  const totalActual = data.unitSummaries.reduce((sum, u) => sum + u.actual, 0);
+  const totalTarget = data.unitSummaries.reduce((sum, u) => sum + u.target, 0);
+  const totalPct = pctOf(totalActual, totalTarget);
+  const unitsOnTarget = data.unitSummaries.filter((u) => u.target > 0 && u.pct >= 100).length;
 
   return (
-    <main className="min-h-screen bg-cream">
-      <header className="border-b-[3px] border-yellow bg-[linear-gradient(175deg,#072d69_0%,#041c47_100%)] px-7 py-8 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Image
-              src="/logo-tabua-carne-white.png"
-              alt="Tábua de Carne"
-              width={597}
-              height={330}
-              className="h-9 w-auto"
-            />
-            <span className="font-mono text-[11px] uppercase tracking-wide text-yellow">
-              Painel Interno
-            </span>
+    <div className="space-y-10">
+      <section>
+        <h1 className="font-serif text-3xl font-semibold text-navy">
+          Metas de Vendas & Faturamento
+        </h1>
+        <p className="mt-1 text-sm text-ink-soft">
+          Acompanhamento por unidade, vendedor e campanha — {formatMonthLabel(monthKey)}
+        </p>
+
+        <div className="mt-6 grid grid-cols-1 gap-6 rounded-lg border border-border-navy bg-white p-6 sm:grid-cols-3">
+          <div>
+            <p className="font-mono text-[10.5px] uppercase tracking-wide text-ink-soft">
+              Faturamento realizado
+            </p>
+            <p className="mt-1 font-serif text-[27px] font-semibold text-navy">
+              {formatCurrency(totalActual)}
+            </p>
+            <p className="text-xs text-ink-soft">Meta: {formatCurrency(totalTarget)}</p>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-full bg-seafoam px-4 py-1.5 text-xs font-semibold text-navy"
+          <div className="sm:border-l sm:border-border-navy sm:pl-6">
+            <p className="font-mono text-[10.5px] uppercase tracking-wide text-ink-soft">
+              % da meta
+            </p>
+            <p
+              className={`mt-1 font-serif text-[27px] font-semibold ${totalPct >= 100 ? "text-yellow" : "text-navy"}`}
             >
-              Sair
-            </button>
-          </form>
+              {formatPercent(totalPct)}
+            </p>
+            <p className="text-xs text-ink-soft">Grupo Tábua de Carne</p>
+          </div>
+          <div className="sm:border-l sm:border-border-navy sm:pl-6">
+            <p className="font-mono text-[10.5px] uppercase tracking-wide text-ink-soft">
+              Unidades na meta
+            </p>
+            <p className="mt-1 font-serif text-[27px] font-semibold text-navy">
+              {unitsOnTarget} / {data.unitSummaries.length}
+            </p>
+            <p className="text-xs text-ink-soft">Bateram 100% ou mais</p>
+          </div>
         </div>
-        <h1 className="mt-6 font-serif text-3xl font-semibold">Metas de Vendas & Faturamento</h1>
-      </header>
-
-      <section className="mx-auto max-w-5xl px-7 py-10">
-        {profile ? (
-          <div className="rounded-lg border border-border-navy bg-white p-5">
-            <p className="text-sm text-ink-soft">Logado como</p>
-            <p className="font-serif text-xl font-semibold text-navy">
-              {profile.full_name} — {profile.role_label}
-            </p>
-            <p className="mt-1 text-sm text-ink-soft">
-              {profile.is_admin ? "Administrador do sistema. " : ""}
-              {profile.all_units ? "Acesso a todas as unidades." : "Acesso definido por unidade."}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-terracotta/40 bg-terracotta/10 p-5 text-sm text-ink">
-            Sua conta foi autenticada, mas ainda não tem um perfil cadastrado no sistema. Peça a
-            um administrador para vincular seu acesso.
-          </div>
-        )}
-
-        <h2 className="mt-10 font-serif text-xl font-semibold text-navy">Unidades cadastradas</h2>
-        <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(units ?? []).map((u) => (
-            <li key={u.id} className="rounded-lg border-t-[3px] border-navy bg-white p-4 shadow-sm">
-              <p className="font-serif font-semibold text-navy">{u.name}</p>
-              <p className="text-xs text-ink-soft">{u.location}</p>
-            </li>
-          ))}
-        </ul>
-        {(units ?? []).length === 0 ? (
-          <p className="mt-3 text-sm text-ink-soft">
-            Nenhuma unidade visível — isso é esperado se o seu perfil ainda não tem acesso
-            liberado a nenhuma loja.
-          </p>
-        ) : null}
       </section>
-    </main>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-serif text-xl font-semibold text-navy">
+            Unidades{" "}
+            <span className="text-base font-normal text-ink-soft">
+              ({data.unitSummaries.length})
+            </span>
+          </h2>
+          {selectedUnitId ? (
+            <Link href={`/painel?mes=${monthKey}`} className="text-xs font-medium text-navy underline">
+              Ver todas as unidades liberadas
+            </Link>
+          ) : null}
+        </div>
+        <UnitCards units={data.unitSummaries} monthKey={monthKey} selectedUnitId={selectedUnitId} />
+      </section>
+
+      <RankingSection
+        monthKey={monthKey}
+        categories={data.categories}
+        sellers={data.sellers}
+        categorySales={data.categorySales}
+        selectedUnitId={selectedUnitId}
+        selectedCategoryId={selectedCategoryId}
+      />
+
+      <CampaignSection
+        monthKey={monthKey}
+        units={data.unitSummaries}
+        sellers={data.sellers}
+        campaignItems={data.campaignItems}
+        campaignSales={data.campaignSales}
+        selectedUnitId={selectedUnitId}
+      />
+    </div>
   );
 }
