@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-navy: #072d69;
+  --color-navy-dark: #041c47;
+  --color-yellow: #ffdf00;
+  --color-seafoam: #bdded7;
+  --color-terracotta: #b6763a;
+  --color-cream: #f7f2e7;
+  --color-table-head: #f2ede1;
+  --color-ink: #241f1a;
+  --color-ink-soft: #6b6255;
+  --color-border-navy: rgb(7 45 105 / 0.14);
+  --color-border-navy-soft: rgb(7 45 105 / 0.1);
+
+  --background: var(--color-cream);
+  --foreground: var(--color-ink);
 }
 
 @theme inline {
+  --color-navy: var(--color-navy);
+  --color-navy-dark: var(--color-navy-dark);
+  --color-yellow: var(--color-yellow);
+  --color-seafoam: var(--color-seafoam);
+  --color-terracotta: var(--color-terracotta);
+  --color-cream: var(--color-cream);
+  --color-table-head: var(--color-table-head);
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-border-navy: var(--color-border-navy);
+  --color-border-navy-soft: var(--color-border-navy-soft);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-source-serif), Georgia, serif;
+  --font-sans: var(--font-work-sans), system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  background-image: radial-gradient(rgb(7 45 105 / 0.05) 1px, transparent 1px);
+  background-size: 15px 15px;
 }
