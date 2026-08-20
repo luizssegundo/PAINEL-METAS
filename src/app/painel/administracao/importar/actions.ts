@@ -22,6 +22,19 @@ const CATEGORY_KEY_DETECTORS: Record<CategoryKey, (normalizedDbName: string) => 
   sobremesas: (n) => n.includes("sobremesa"),
 };
 
+// Campaign items whose name doesn't literally appear on a product line — either
+// because it names a whole product category, or because it covers several SKUs
+// whose ERP names vary/typo across units. Keyed by the campaign item's normalized name.
+const CAMPAIGN_CATEGORY_MATCH: Record<string, CategoryKey> = {
+  sobremesas: "sobremesas",
+};
+const CAMPAIGN_PRODUCT_ALIASES: Record<string, string[]> = {
+  "vinho do tabua": [
+    "tabua de carne classico", // covers "CAB SAUV" / "CABERNET SAUVIGNON" / the "CARBENERT" ERP typo
+    "tabua de carne reserva malbec",
+  ],
+};
+
 function resolveCategoryKeyToId(categories: DbCategory[]): Map<CategoryKey, string> {
   const result = new Map<CategoryKey, string>();
   for (const category of categories) {
@@ -145,19 +158,38 @@ export async function importReport(formData: FormData) {
     .eq("ref_month", refMonth)
     .eq("active", true)
     .eq("unit_id", unit.id);
-  const campaignItems = [...(globalCampaignItems ?? []), ...(unitCampaignItems ?? [])].map((c) => ({
-    id: c.id,
-    norm: normalizeName(c.name),
-  }));
+  const campaignItems = [...(globalCampaignItems ?? []), ...(unitCampaignItems ?? [])].map((c) => {
+    const norm = normalizeName(c.name);
+    return {
+      id: c.id,
+      norm,
+      categoryKey: CAMPAIGN_CATEGORY_MATCH[norm] ?? null,
+      aliases: CAMPAIGN_PRODUCT_ALIASES[norm] ?? [norm],
+    };
+  });
 
   const campaignRows: { seller_id: string; campaign_item_id: string; qty_sold: number; source: string; external_ref: string }[] = [];
 
+  // Category-wide campaigns (e.g. "Sobremesas"): sum the seller's whole category total
+  // rather than matching a single product line.
+  for (const item of campaignItems) {
+    if (!item.categoryKey) continue;
+    for (const [sellerName, catMap] of parsed.sellerCategoryQty) {
+      const sellerId = sellerIdByNorm.get(normalizeName(sellerName));
+      const qty = catMap.get(item.categoryKey);
+      if (!sellerId || !qty) continue;
+      campaignRows.push({ seller_id: sellerId, campaign_item_id: item.id, qty_sold: qty, source: SOURCE, external_ref: file.name });
+    }
+  }
+
+  // Product-based campaigns: match by alias substrings (defaults to the campaign's own name).
+  const productCampaignItems = campaignItems.filter((c) => !c.categoryKey);
   for (const [sellerName, prodMap] of parsed.sellerProductQty) {
     const sellerId = sellerIdByNorm.get(normalizeName(sellerName));
     if (!sellerId) continue;
     for (const [productName, qty] of prodMap) {
       const productNorm = normalizeName(productName);
-      const match = campaignItems.find((c) => productNorm.includes(c.norm));
+      const match = productCampaignItems.find((c) => c.aliases.some((alias) => productNorm.includes(alias)));
       if (!match) continue;
       campaignRows.push({
         seller_id: sellerId,
