@@ -9,7 +9,7 @@ const CARDS = [
   {
     href: "/painel/administracao/vendedores",
     title: "Vendedores",
-    description: "Cadastro de vendedores por unidade.",
+    description: "Lista de vendedores por unidade, sincronizada automaticamente pela importação do relatório de vendas.",
   },
   {
     href: "/painel/administracao/metas",
@@ -22,9 +22,14 @@ const CARDS = [
     description: "Produtos e metas de campanha do mês.",
   },
   {
+    href: "/painel/administracao/importar",
+    title: "Importar relatório",
+    description: "Envie o relatório de vendas do ERP (.xlsx) para atualizar vendedores, faturamento e vendas — use quando a integração automática não estiver disponível.",
+  },
+  {
     href: "/painel/administracao/lancamentos",
     title: "Lançamentos",
-    description: "Faturamento realizado e vendas por vendedor (enquanto a integração com o ERP não está ativa).",
+    description: "Consulta do faturamento realizado e das vendas por vendedor, atualizados pela importação de relatórios.",
   },
   {
     href: "/painel/administracao/auditoria",

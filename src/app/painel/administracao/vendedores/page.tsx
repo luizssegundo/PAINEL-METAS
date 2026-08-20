@@ -1,6 +1,6 @@
 import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
-import { createSeller, updateSeller } from "./actions";
+import { setSellerActive } from "./actions";
 
 export default async function VendedoresPage() {
   const viewer = await requireViewer();
@@ -15,10 +15,13 @@ export default async function VendedoresPage() {
         .order("name")
     : { data: [] };
 
-  const editableUnits = viewer.units.filter((u) => u.canEdit);
-
   return (
     <div className="space-y-8">
+      <p className="text-xs font-medium text-ink-soft">
+        Os vendedores são cadastrados automaticamente a partir da importação do relatório de vendas do ERP — não é
+        necessário adicioná-los manualmente aqui. Use os controles abaixo apenas para desativar um vendedor que não
+        deve mais aparecer no painel (ex.: desligamento).
+      </p>
       {viewer.units.map((unit) => {
         const unitSellers = (sellers ?? []).filter((s) => s.unit_id === unit.id);
         return (
@@ -35,41 +38,28 @@ export default async function VendedoresPage() {
               <tbody>
                 {unitSellers.map((s) => (
                   <tr key={s.id} className="border-t border-border-navy-soft">
+                    <td className="px-3 py-2 text-ink">{s.name}</td>
+                    <td className="px-3 py-2 text-ink-soft">{s.active ? "Sim" : "Não"}</td>
                     {unit.canEdit ? (
-                      <>
-                        <td className="px-3 py-2" colSpan={3}>
-                          <form action={updateSeller} className="flex items-center gap-3">
-                            <input type="hidden" name="id" value={s.id} />
-                            <input
-                              name="name"
-                              defaultValue={s.name}
-                              className="flex-1 rounded-md border border-border-navy px-2 py-1 text-sm"
-                            />
-                            <label className="flex items-center gap-1.5 text-xs text-ink-soft">
-                              <input type="checkbox" name="active" defaultChecked={s.active} />
-                              Ativo
-                            </label>
-                            <button
-                              type="submit"
-                              className="rounded-md bg-navy px-3 py-1 text-xs font-semibold text-white"
-                            >
-                              Salvar
-                            </button>
-                          </form>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-3 py-2 text-ink">{s.name}</td>
-                        <td className="px-3 py-2 text-ink-soft">{s.active ? "Sim" : "Não"}</td>
-                      </>
-                    )}
+                      <td className="px-3 py-2 text-right">
+                        <form action={setSellerActive}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <input type="hidden" name="active" value={s.active ? "false" : "true"} />
+                          <button
+                            type="submit"
+                            className="rounded-md border border-border-navy px-3 py-1 text-xs font-semibold text-navy"
+                          >
+                            {s.active ? "Desativar" : "Ativar"}
+                          </button>
+                        </form>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
                 {unitSellers.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="px-3 py-4 text-center text-ink-soft">
-                      Nenhum vendedor cadastrado.
+                      Nenhum vendedor importado ainda.
                     </td>
                   </tr>
                 ) : null}
@@ -78,39 +68,6 @@ export default async function VendedoresPage() {
           </section>
         );
       })}
-
-      {editableUnits.length > 0 ? (
-        <section className="rounded-lg border border-border-navy bg-white p-5">
-          <h2 className="font-serif text-lg font-semibold text-navy">Novo vendedor</h2>
-          <form action={createSeller} className="mt-3 flex flex-wrap items-end gap-3">
-            <div>
-              <label className="block text-xs text-ink-soft">Nome</label>
-              <input
-                name="name"
-                required
-                className="mt-1 rounded-md border border-border-navy px-2 py-1.5 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-ink-soft">Unidade</label>
-              <select
-                name="unitId"
-                required
-                className="mt-1 rounded-md border border-border-navy px-2 py-1.5 text-sm"
-              >
-                {editableUnits.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button type="submit" className="rounded-md bg-yellow px-4 py-1.5 text-sm font-bold text-navy">
-              Adicionar
-            </button>
-          </form>
-        </section>
-      ) : null}
     </div>
   );
 }
