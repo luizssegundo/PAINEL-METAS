@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { requireViewer } from "@/lib/viewer";
 
 const CARDS = [
   {
     href: "/painel/administracao/usuarios",
     title: "Usuários e acesso",
     description: "Cadastrar usuários, definir unidades liberadas e permissão de edição.",
+    adminOnly: true,
   },
   {
     href: "/painel/administracao/vendedores",
@@ -35,13 +37,17 @@ const CARDS = [
     href: "/painel/administracao/auditoria",
     title: "Auditoria",
     description: "Histórico de alterações filtrável por mês e unidade.",
+    adminOnly: true,
   },
 ];
 
-export default function AdministracaoHomePage() {
+export default async function AdministracaoHomePage() {
+  const viewer = await requireViewer();
+  const cards = CARDS.filter((c) => !c.adminOnly || viewer.isAdmin);
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {CARDS.map((c) => (
+      {cards.map((c) => (
         <Link
           key={c.href}
           href={c.href}

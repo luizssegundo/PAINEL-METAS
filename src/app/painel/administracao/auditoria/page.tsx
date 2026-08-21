@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonthKey, formatMonthLabel } from "@/lib/months";
@@ -13,6 +14,8 @@ export default async function AuditoriaPage({
   const unitFilter = sp.unidade ?? "all";
 
   const viewer = await requireViewer();
+  if (!viewer.isAdmin) redirect("/painel/administracao");
+
   const supabase = await createClient();
 
   let query = supabase

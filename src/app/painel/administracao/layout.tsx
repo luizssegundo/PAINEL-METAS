@@ -3,13 +3,13 @@ import { redirect } from "next/navigation";
 import { requireViewer, canEditAnything } from "@/lib/viewer";
 
 const SECTIONS = [
-  { href: "/painel/administracao/usuarios", label: "Usuários e acesso" },
+  { href: "/painel/administracao/usuarios", label: "Usuários e acesso", adminOnly: true },
   { href: "/painel/administracao/vendedores", label: "Vendedores" },
   { href: "/painel/administracao/metas", label: "Metas de faturamento" },
   { href: "/painel/administracao/campanha", label: "Campanha de vendas" },
   { href: "/painel/administracao/importar", label: "Importar relatório" },
   { href: "/painel/administracao/lancamentos", label: "Lançamentos" },
-  { href: "/painel/administracao/auditoria", label: "Auditoria" },
+  { href: "/painel/administracao/auditoria", label: "Auditoria", adminOnly: true },
 ];
 
 export default async function AdministracaoLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +17,7 @@ export default async function AdministracaoLayout({ children }: { children: Reac
   if (!canEditAnything(viewer)) {
     redirect("/painel");
   }
+  const sections = SECTIONS.filter((s) => !s.adminOnly || viewer.isAdmin);
 
   return (
     <div className="space-y-6">
@@ -25,7 +26,7 @@ export default async function AdministracaoLayout({ children }: { children: Reac
         <div className="mt-1 h-0.5 w-9 bg-yellow" />
       </div>
       <nav className="flex flex-wrap gap-2 border-b border-border-navy pb-4">
-        {SECTIONS.map((s) => (
+        {sections.map((s) => (
           <Link
             key={s.href}
             href={s.href}

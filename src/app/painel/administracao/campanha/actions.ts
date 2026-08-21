@@ -39,6 +39,17 @@ export async function updateCampaignItem(formData: FormData) {
   revalidatePath("/painel");
 }
 
+export async function toggleCampaignItemActive(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const active = formData.get("active") === "true";
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase.from("campaign_items").update({ active }).eq("id", id);
+  revalidatePath("/painel/administracao/campanha");
+  revalidatePath("/painel");
+}
+
 export async function deleteCampaignItem(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;

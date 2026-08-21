@@ -1,6 +1,7 @@
 import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
 import { setSellerActive } from "./actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export default async function VendedoresPage() {
   const viewer = await requireViewer();
@@ -45,12 +46,13 @@ export default async function VendedoresPage() {
                         <form action={setSellerActive}>
                           <input type="hidden" name="id" value={s.id} />
                           <input type="hidden" name="active" value={s.active ? "false" : "true"} />
-                          <button
-                            type="submit"
+                          <ConfirmSubmitButton
+                            confirmMessage={`Deseja realmente ${s.active ? "desativar" : "ativar"} o vendedor ${s.name}?`}
+                            successMessage="Vendedor atualizado com sucesso!"
                             className="rounded-md border border-border-navy px-3 py-1 text-xs font-semibold text-navy"
                           >
                             {s.active ? "Desativar" : "Ativar"}
-                          </button>
+                          </ConfirmSubmitButton>
                         </form>
                       </td>
                     ) : null}

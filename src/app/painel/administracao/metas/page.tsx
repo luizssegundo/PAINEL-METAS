@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { currentMonthKey, formatMonthLabel, isCurrentMonth } from "@/lib/months";
 import { formatCurrency } from "@/lib/format";
 import { upsertRevenueTarget } from "./actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export default async function MetasPage({
   searchParams,
@@ -40,52 +41,56 @@ export default async function MetasPage({
         ) : null}
       </div>
 
-      <table className="mt-4 w-full text-sm">
-        <thead className="bg-table-head text-left font-mono text-[10.5px] uppercase tracking-wide text-ink-soft">
-          <tr>
-            <th className="px-3 py-2">Unidade</th>
-            <th className="px-3 py-2">Meta atual</th>
-            {!readOnly ? <th className="px-3 py-2 text-right">Nova meta</th> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {viewer.units.map((u) => {
-            const current = targetByUnit.get(u.id) ?? 0;
-            return (
-              <tr key={u.id} className="border-t border-border-navy-soft">
-                <td className="px-3 py-2.5 font-medium text-ink">{u.name}</td>
-                <td className="px-3 py-2.5 font-mono">{formatCurrency(current)}</td>
-                {!readOnly ? (
-                  <td className="px-3 py-2.5 text-right">
-                    {u.canEdit ? (
-                      <form action={upsertRevenueTarget} className="flex justify-end gap-2">
-                        <input type="hidden" name="unitId" value={u.id} />
-                        <input type="hidden" name="refMonth" value={monthKey} />
-                        <input
-                          type="number"
-                          name="amount"
-                          min="0.01"
-                          step="0.01"
-                          placeholder={String(current || "")}
-                          className="w-36 rounded-md border border-border-navy px-2 py-1 text-right text-sm"
-                        />
-                        <button
-                          type="submit"
-                          className="rounded-md bg-navy px-3 py-1 text-xs font-semibold text-white"
-                        >
-                          Salvar
-                        </button>
-                      </form>
-                    ) : (
-                      <span className="text-xs text-ink-soft">Sem permissão de edição</span>
-                    )}
-                  </td>
-                ) : null}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-table-head text-left font-mono text-[10.5px] uppercase tracking-wide text-ink-soft">
+            <tr>
+              <th className="px-3 py-2">Unidade</th>
+              <th className="px-3 py-2">Meta atual</th>
+              {!readOnly ? <th className="px-3 py-2 text-right">Nova meta</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {viewer.units.map((u) => {
+              const current = targetByUnit.get(u.id) ?? 0;
+              return (
+                <tr key={u.id} className="border-t border-border-navy-soft">
+                  <td className="px-3 py-2.5 font-medium text-ink whitespace-nowrap">{u.name}</td>
+                  <td className="px-3 py-2.5 font-mono whitespace-nowrap">{formatCurrency(current)}</td>
+                  {!readOnly ? (
+                    <td className="px-3 py-2.5 text-right">
+                      {u.canEdit ? (
+                        <form action={upsertRevenueTarget} className="flex justify-end gap-2">
+                          <input type="hidden" name="unitId" value={u.id} />
+                          <input type="hidden" name="refMonth" value={monthKey} />
+                          <input
+                            type="number"
+                            name="amount"
+                            min="0.01"
+                            step="0.01"
+                            required
+                            placeholder={String(current || "")}
+                            className="w-28 rounded-md border border-border-navy px-2 py-1 text-right text-sm sm:w-36"
+                          />
+                          <ConfirmSubmitButton
+                            confirmMessage={`Confirma a nova meta de faturamento para ${u.name}?`}
+                            successMessage="Meta atualizada com sucesso!"
+                            className="rounded-md bg-navy px-3 py-1 text-xs font-semibold text-white"
+                          >
+                            Salvar
+                          </ConfirmSubmitButton>
+                        </form>
+                      ) : (
+                        <span className="text-xs text-ink-soft">Sem permissão de edição</span>
+                      )}
+                    </td>
+                  ) : null}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

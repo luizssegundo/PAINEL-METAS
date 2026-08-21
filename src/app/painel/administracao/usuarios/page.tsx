@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
 import { createUser, updateUserPermissions } from "./actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export default async function UsuariosPage() {
   const viewer = await requireViewer();
@@ -128,12 +129,13 @@ export default async function UsuariosPage() {
                         })}
                       </div>
                     </div>
-                    <button
-                      type="submit"
+                    <ConfirmSubmitButton
+                      confirmMessage={`Confirma as alterações no usuário ${p.full_name}?`}
+                      successMessage="Usuário atualizado com sucesso!"
                       className="rounded-md bg-navy px-3 py-1.5 text-xs font-semibold text-white"
                     >
                       Salvar
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 </div>
               </details>
@@ -214,9 +216,12 @@ export default async function UsuariosPage() {
               ))}
             </div>
           </div>
-          <button type="submit" className="rounded-md bg-yellow px-4 py-1.5 text-sm font-bold text-navy">
+          <ConfirmSubmitButton
+            confirmMessage="Confirma o cadastro deste novo usuário?"
+            className="rounded-md bg-yellow px-4 py-1.5 text-sm font-bold text-navy"
+          >
             Cadastrar usuário
-          </button>
+          </ConfirmSubmitButton>
         </form>
       </section>
     </div>

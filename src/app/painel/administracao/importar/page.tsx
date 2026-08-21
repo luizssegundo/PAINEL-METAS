@@ -3,6 +3,7 @@ import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonthKey, formatMonthLabel, isCurrentMonth } from "@/lib/months";
 import { importReport } from "./actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export default async function ImportarPage({
   searchParams,
@@ -103,9 +104,12 @@ export default async function ImportarPage({
                 className="mt-1 rounded-md border border-border-navy px-2 py-1.5 text-sm"
               />
             </div>
-            <button type="submit" className="rounded-md bg-yellow px-4 py-1.5 text-sm font-bold text-navy">
+            <ConfirmSubmitButton
+              confirmMessage={`Confirma o envio deste relatório para ${unit.name}? Os dados de vendedores, faturamento e vendas do mês serão atualizados.`}
+              className="rounded-md bg-yellow px-4 py-1.5 text-sm font-bold text-navy"
+            >
               Importar relatório
-            </button>
+            </ConfirmSubmitButton>
           </form>
         ) : !unit.canEdit ? (
           <p className="mt-4 text-sm text-ink-soft">Você não tem permissão de edição para esta unidade.</p>

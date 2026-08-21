@@ -1,7 +1,8 @@
 import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonthKey, formatMonthLabel, isCurrentMonth } from "@/lib/months";
-import { createCampaignItem, updateCampaignItem, deleteCampaignItem } from "./actions";
+import { createCampaignItem, updateCampaignItem, deleteCampaignItem, toggleCampaignItemActive } from "./actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export default async function CampanhaPage({
   searchParams,
@@ -37,10 +38,18 @@ export default async function CampanhaPage({
 
   const items = [...(globalItems ?? []), ...(unitItems ?? [])];
 
-  function canEditItem(unitId: string | null) {
+  // Full edit (rename/retarget): admins for global items, unit editors for their own units.
+  function canFullyEdit(unitId: string | null) {
     if (readOnly) return false;
     if (unitId === null) return viewer.isAdmin;
     return editableUnits.some((u) => u.id === unitId);
+  }
+
+  // Activate/deactivate + remove: same as full edit, plus any unit editor for global items.
+  function canToggleAndDelete(unitId: string | null) {
+    if (canFullyEdit(unitId)) return true;
+    if (readOnly) return false;
+    return unitId === null && editableUnits.length > 0;
   }
 
   return (
@@ -57,24 +66,26 @@ export default async function CampanhaPage({
           ) : null}
         </div>
 
-        <table className="mt-4 w-full text-sm">
-          <thead className="bg-table-head text-left font-mono text-[10.5px] uppercase tracking-wide text-ink-soft">
-            <tr>
-              <th className="px-3 py-2">Produto</th>
-              <th className="px-3 py-2">Tipo</th>
-              <th className="px-3 py-2">Escopo</th>
-              <th className="px-3 py-2">Meta/vendedor</th>
-              <th className="px-3 py-2">Ativo</th>
-              <th className="px-3 py-2 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-table-head text-left font-mono text-[10.5px] uppercase tracking-wide text-ink-soft">
+              <tr>
+                <th className="px-3 py-2">Produto</th>
+                <th className="px-3 py-2">Tipo</th>
+                <th className="px-3 py-2">Escopo</th>
+                <th className="px-3 py-2">Meta/vendedor</th>
+                <th className="px-3 py-2">Ativo</th>
+                <th className="px-3 py-2 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
             {items.map((item) => {
-              const editable = canEditItem(item.unit_id);
+              const fullyEditable = canFullyEdit(item.unit_id);
+              const canToggle = canToggleAndDelete(item.unit_id);
               const scopeLabel = item.unit_id === null ? "Todas as unidades" : (unitNameById.get(item.unit_id) ?? "—");
               return (
                 <tr key={item.id} className="border-t border-border-navy-soft">
-                  {editable ? (
+                  {fullyEditable ? (
                     <td colSpan={6} className="px-3 py-2">
                       <form action={updateCampaignItem} className="flex flex-wrap items-center gap-3">
                         <input type="hidden" name="id" value={item.id} />
@@ -98,18 +109,23 @@ export default async function CampanhaPage({
                           <input type="checkbox" name="active" defaultChecked={item.active} />
                           Ativo
                         </label>
-                        <button
-                          type="submit"
+                        <ConfirmSubmitButton
+                          confirmMessage={`Confirma as alterações em "${item.name}"?`}
+                          successMessage="Campanha atualizada com sucesso!"
                           className="rounded-md bg-navy px-3 py-1 text-xs font-semibold text-white"
                         >
                           Salvar
-                        </button>
+                        </ConfirmSubmitButton>
                       </form>
                       <form action={deleteCampaignItem} className="mt-1">
                         <input type="hidden" name="id" value={item.id} />
-                        <button type="submit" className="text-xs font-medium text-terracotta underline">
+                        <ConfirmSubmitButton
+                          confirmMessage={`Deseja realmente remover a campanha "${item.name}"? Essa ação não pode ser desfeita.`}
+                          successMessage="Campanha removida com sucesso!"
+                          className="text-xs font-medium text-terracotta underline"
+                        >
                           Remover
-                        </button>
+                        </ConfirmSubmitButton>
                       </form>
                     </td>
                   ) : (
@@ -121,7 +137,33 @@ export default async function CampanhaPage({
                       <td className="px-3 py-2 text-ink-soft">{scopeLabel}</td>
                       <td className="px-3 py-2 font-mono">{item.target_per_seller}</td>
                       <td className="px-3 py-2 text-ink-soft">{item.active ? "Sim" : "Não"}</td>
-                      <td className="px-3 py-2" />
+                      <td className="px-3 py-2 text-right">
+                        {canToggle ? (
+                          <div className="flex justify-end gap-3">
+                            <form action={toggleCampaignItemActive}>
+                              <input type="hidden" name="id" value={item.id} />
+                              <input type="hidden" name="active" value={String(!item.active)} />
+                              <ConfirmSubmitButton
+                                confirmMessage={`Deseja realmente ${item.active ? "desativar" : "ativar"} a campanha "${item.name}"?`}
+                                successMessage="Campanha atualizada com sucesso!"
+                                className="text-xs font-medium text-navy underline"
+                              >
+                                {item.active ? "Desativar" : "Ativar"}
+                              </ConfirmSubmitButton>
+                            </form>
+                            <form action={deleteCampaignItem}>
+                              <input type="hidden" name="id" value={item.id} />
+                              <ConfirmSubmitButton
+                                confirmMessage={`Deseja realmente remover a campanha "${item.name}"? Essa ação não pode ser desfeita.`}
+                                successMessage="Campanha removida com sucesso!"
+                                className="text-xs font-medium text-terracotta underline"
+                              >
+                                Remover
+                              </ConfirmSubmitButton>
+                            </form>
+                          </div>
+                        ) : null}
+                      </td>
                     </>
                   )}
                 </tr>
@@ -134,8 +176,9 @@ export default async function CampanhaPage({
                 </td>
               </tr>
             ) : null}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {!readOnly && editableUnits.length > 0 ? (
@@ -187,9 +230,13 @@ export default async function CampanhaPage({
                 ))}
               </select>
             </div>
-            <button type="submit" className="rounded-md bg-yellow px-4 py-1.5 text-sm font-bold text-navy">
+            <ConfirmSubmitButton
+              confirmMessage="Confirma a criação deste novo item de campanha?"
+              successMessage="Campanha cadastrada com sucesso!"
+              className="rounded-md bg-yellow px-4 py-1.5 text-sm font-bold text-navy"
+            >
               Adicionar
-            </button>
+            </ConfirmSubmitButton>
           </form>
         </div>
       ) : null}
