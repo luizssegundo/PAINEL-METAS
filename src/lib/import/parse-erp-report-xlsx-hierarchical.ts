@@ -21,6 +21,7 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
   const sellerNames = new Set<string>();
   const genericSellerNames = new Set<string>();
   const unmappedSubgrupos = new Set<string>();
+  const foundDates: string[] = [];
 
   let totalRevenue = 0;
   let rowsRead = 0;
@@ -36,6 +37,12 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
     for (let r = 1; r <= sheet.rowCount; r++) {
       const row = sheet.getRow(r);
       const aText = cellText(row.getCell(1).value);
+
+      if (aText.startsWith("Data Caixa:")) {
+        const m = aText.match(/(\d{2}\/\d{2}\/\d{4})/);
+        if (m) foundDates.push(m[1]);
+        continue;
+      }
 
       if (aText.startsWith("Atendente:")) {
         headerFound = true;
@@ -104,5 +111,6 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
     genericSellerNames,
     unmappedSubgrupos,
     warnings,
+    foundDates,
   };
 }

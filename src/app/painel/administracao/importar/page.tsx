@@ -50,7 +50,8 @@ export default async function ImportarPage({
         <p className="mb-2 text-xs font-medium text-ink-soft">
           Envie aqui o relatório de vendas exportado do sistema (PDF ou .xlsx) — vendedores, faturamento realizado e
           vendas por categoria/campanha são lidos automaticamente do arquivo. Use apenas quando a integração
-          automática com o ERP não estiver disponível.
+          automática com o ERP não estiver disponível. O relatório precisa ter o detalhamento por dia ("Data Caixa:"),
+          começando no dia 01 do mês vigente — arquivos sem data ou de outro mês são rejeitados automaticamente.
         </p>
         <div className="flex flex-wrap gap-2">
           {viewer.units.map((u) => (

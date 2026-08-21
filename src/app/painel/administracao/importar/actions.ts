@@ -9,6 +9,7 @@ import { parseErpReportXlsxHierarchical } from "@/lib/import/parse-erp-report-xl
 import type { CategoryKey, ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
 import { normalizeName } from "@/lib/import/normalize";
 import { formatCurrency } from "@/lib/format";
+import { formatMonthLabel } from "@/lib/months";
 
 const SOURCE = "import";
 
@@ -34,6 +35,12 @@ const CAMPAIGN_PRODUCT_ALIASES: Record<string, string[]> = {
     "tabua de carne reserva malbec",
   ],
 };
+
+function parseBrDate(raw: string): { day: number; month: number; year: number } | null {
+  const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  return { day: Number(m[1]), month: Number(m[2]), year: Number(m[3]) };
+}
 
 function resolveCategoryKeyToId(categories: DbCategory[]): Map<CategoryKey, string> {
   const result = new Map<CategoryKey, string>();
@@ -77,6 +84,37 @@ export async function importReport(formData: FormData) {
     await logImport(viewer.userId, unit.id, refMonth, file.name, [
       "Nenhum dado reconhecido no arquivo — nenhuma alteração foi feita.",
       ...warnings,
+    ]);
+    revalidatePath("/painel/administracao/importar");
+    return;
+  }
+
+  const [expectedYear, expectedMonth] = refMonth.split("-").map(Number);
+
+  if (parsed.foundDates.length === 0) {
+    await logImport(viewer.userId, unit.id, refMonth, file.name, [
+      'Arquivo rejeitado — não contém informação de data ("Data Caixa:"). Exporte o relatório do sistema com o detalhamento por dia e envie novamente. Nenhuma alteração foi feita.',
+    ]);
+    revalidatePath("/painel/administracao/importar");
+    return;
+  }
+
+  const firstDate = parseBrDate(parsed.foundDates[0]);
+  if (!firstDate || firstDate.day !== 1) {
+    await logImport(viewer.userId, unit.id, refMonth, file.name, [
+      `Arquivo rejeitado — o relatório deve começar no dia 01 do mês. Primeira data encontrada no arquivo: ${parsed.foundDates[0]}. Nenhuma alteração foi feita.`,
+    ]);
+    revalidatePath("/painel/administracao/importar");
+    return;
+  }
+
+  const outOfMonthDate = parsed.foundDates
+    .map(parseBrDate)
+    .find((d) => d && (d.month !== expectedMonth || d.year !== expectedYear));
+  if (outOfMonthDate) {
+    const formatted = `${String(outOfMonthDate.day).padStart(2, "0")}/${String(outOfMonthDate.month).padStart(2, "0")}/${outOfMonthDate.year}`;
+    await logImport(viewer.userId, unit.id, refMonth, file.name, [
+      `Arquivo rejeitado — contém datas fora do mês vigente (${formatMonthLabel(refMonth)}). Data encontrada: ${formatted}. Envie o relatório correspondente a este mês. Nenhuma alteração foi feita.`,
     ]);
     revalidatePath("/painel/administracao/importar");
     return;

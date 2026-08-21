@@ -17,6 +17,8 @@ export type ParsedHierarchicalReport = {
   genericSellerNames: Set<string>;
   unmappedSubgrupos: Set<string>;
   warnings: string[];
+  /** "Data Caixa:" lines found, as raw "DD/MM/YYYY" strings, in file order. */
+  foundDates: string[];
 };
 
 const NUM = String.raw`\d+(?:[.,]\d+)?`;
@@ -24,6 +26,7 @@ const ATENDENTE_RE = new RegExp(`^Atendente:\\s*(.+?)\\s+${NUM}\\s+R\\$`, "i");
 const GRUPO_RE = new RegExp(`^Grupo:\\s*(.+?)\\s+${NUM}\\s+R\\$`, "i");
 const SUBGRUPO_RE = new RegExp(`^Subgrupo:\\s*(.+?)\\s+${NUM}\\s+R\\$`, "i");
 const PRODUCT_RE = new RegExp(`^\\d+\\s+(.+)\\s+(${NUM})\\s+(${NUM})\\s+\\S+$`);
+const DATA_CAIXA_RE = /^Data Caixa:\s*(\d{2}\/\d{2}\/\d{4})/i;
 
 /**
  * Parses the "Atendente: / Grupo: / Subgrupo: / <código> <produto> <qtd> <valor> <unidade>"
@@ -36,6 +39,7 @@ export function parseHierarchicalLines(lines: Iterable<string>): ParsedHierarchi
   const sellerNames = new Set<string>();
   const genericSellerNames = new Set<string>();
   const unmappedSubgrupos = new Set<string>();
+  const foundDates: string[] = [];
 
   let totalRevenue = 0;
   let rowsRead = 0;
@@ -48,6 +52,12 @@ export function parseHierarchicalLines(lines: Iterable<string>): ParsedHierarchi
     const line = rawLine.trim();
     if (!line) continue;
     if (/^C[oó]digo\s+Produto\s+Quantidade\s+Valor\s+Unidade$/i.test(line)) continue;
+
+    const dataCaixaMatch = line.match(DATA_CAIXA_RE);
+    if (dataCaixaMatch) {
+      foundDates.push(dataCaixaMatch[1]);
+      continue;
+    }
 
     const atendenteMatch = line.match(ATENDENTE_RE);
     if (atendenteMatch) {
@@ -123,5 +133,6 @@ export function parseHierarchicalLines(lines: Iterable<string>): ParsedHierarchi
     genericSellerNames,
     unmappedSubgrupos,
     warnings,
+    foundDates,
   };
 }
