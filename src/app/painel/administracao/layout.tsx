@@ -8,7 +8,6 @@ const SECTIONS = [
   { href: "/painel/administracao/metas", label: "Metas de faturamento" },
   { href: "/painel/administracao/campanha", label: "Campanha de vendas" },
   { href: "/painel/administracao/importar", label: "Importar relatório" },
-  { href: "/painel/administracao/lancamentos", label: "Lançamentos" },
   { href: "/painel/administracao/auditoria", label: "Auditoria", adminOnly: true },
 ];
 

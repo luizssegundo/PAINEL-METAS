@@ -29,11 +29,6 @@ const CARDS = [
     description: "Envie o relatório de vendas do ERP (.xlsx) para atualizar vendedores, faturamento e vendas — use quando a integração automática não estiver disponível.",
   },
   {
-    href: "/painel/administracao/lancamentos",
-    title: "Lançamentos",
-    description: "Consulta do faturamento realizado e das vendas por vendedor, atualizados pela importação de relatórios.",
-  },
-  {
     href: "/painel/administracao/auditoria",
     title: "Auditoria",
     description: "Histórico de alterações filtrável por mês e unidade.",

@@ -13,6 +13,9 @@ import { formatMonthLabel } from "@/lib/months";
 
 const SOURCE = "import";
 
+// The ERP report's revenue excludes the 10% service fee; managers track sales with it included.
+const SERVICE_FEE_RATE = 0.1;
+
 type DbCategory = { id: string; name: string };
 
 const CATEGORY_KEY_DETECTORS: Record<CategoryKey, (normalizedDbName: string) => boolean> = {
@@ -136,7 +139,10 @@ export async function importReport(formData: FormData) {
     for (const s of created ?? []) sellerIdByNorm.set(normalizeName(s.name), s.id);
   }
 
-  if (parsed.totalRevenue !== null) {
+  const revenueWithFee =
+    parsed.totalRevenue !== null ? Math.round(parsed.totalRevenue * (1 + SERVICE_FEE_RATE) * 100) / 100 : null;
+
+  if (revenueWithFee !== null) {
     const { data: existingActual } = await supabase
       .from("unit_revenue_actuals")
       .select("id")
@@ -147,13 +153,13 @@ export async function importReport(formData: FormData) {
     if (existingActual) {
       await supabase
         .from("unit_revenue_actuals")
-        .update({ actual_amount: parsed.totalRevenue, source: SOURCE, external_ref: file.name })
+        .update({ actual_amount: revenueWithFee, source: SOURCE, external_ref: file.name })
         .eq("id", existingActual.id);
     } else {
       await supabase.from("unit_revenue_actuals").insert({
         unit_id: unit.id,
         ref_month: refMonth,
-        actual_amount: parsed.totalRevenue,
+        actual_amount: revenueWithFee,
         source: SOURCE,
         external_ref: file.name,
       });
@@ -251,8 +257,8 @@ export async function importReport(formData: FormData) {
 
   const summaryLines = [
     `${parsed.sellerNames.size} vendedor(es) no arquivo (${newSellerNames.length} novo(s) cadastrado(s) automaticamente).`,
-    parsed.totalRevenue !== null
-      ? `Faturamento realizado importado: ${formatCurrency(parsed.totalRevenue)}.`
+    parsed.totalRevenue !== null && revenueWithFee !== null
+      ? `Faturamento realizado importado: ${formatCurrency(revenueWithFee)} (${formatCurrency(parsed.totalRevenue)} do relatório + 10% de taxa de serviço).`
       : "Nenhuma coluna de valor encontrada — faturamento realizado não foi atualizado.",
     `${categoryRows.length} lançamento(s) de vendas por categoria.`,
     `${campaignRows.length} lançamento(s) de vendas de campanha.`,
@@ -263,7 +269,7 @@ export async function importReport(formData: FormData) {
 
   revalidatePath("/painel/administracao/importar");
   revalidatePath("/painel/administracao/vendedores");
-  revalidatePath("/painel/administracao/lancamentos");
+  revalidatePath("/painel/lancamentos");
   revalidatePath("/painel");
 }
 
