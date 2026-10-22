@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { normalizeName } from "@/lib/import/normalize";
 import { classifySubgrupo, isGenericSeller, parseBrNumber, EXCLUDE_KEYWORDS, type CategoryKey } from "@/lib/import/classify-subgrupo";
 import type { ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
+import { isAbcVendasWorkbook, parseAbcVendasWorkbook } from "@/lib/import/parse-erp-report-abc";
 
 export type { CategoryKey, ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
 
@@ -32,6 +33,8 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
 
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+
+  if (isAbcVendasWorkbook(workbook)) return parseAbcVendasWorkbook(workbook);
 
   for (const sheet of workbook.worksheets) {
     for (let r = 1; r <= sheet.rowCount; r++) {

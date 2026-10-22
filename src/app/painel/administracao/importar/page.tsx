@@ -53,6 +53,8 @@ export default async function ImportarPage({
           vendas por categoria/campanha são lidos automaticamente do arquivo. Use apenas quando a integração
           automática com o ERP não estiver disponível. O relatório precisa ter o detalhamento por dia ("Data Caixa:"),
           começando no dia 01 do mês vigente — arquivos sem data ou de outro mês são rejeitados automaticamente.
+          Para Ponta Negra, envie o &quot;Relatório de ABC de Vendas&quot; (PDF ou .xlsx, quebra por Vendedor e Grupo): o
+          período do filtro deve começar no dia 01 do mês, e a taxa de serviço já vem incluída no relatório.
         </p>
         <div className="flex flex-wrap gap-2">
           {viewer.units.map((u) => (

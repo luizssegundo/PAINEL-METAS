@@ -7,6 +7,8 @@ export type ParsedHierarchicalReport = {
   headerFound: boolean;
   rowsRead: number;
   totalRevenue: number | null;
+  /** True when the report's revenue already contains the service fee (so the import must not add it). */
+  revenueIncludesServiceFee?: boolean;
   /** Real (non-generic) seller name -> category key -> items sold. */
   sellerCategoryQty: Map<string, Map<CategoryKey, number>>;
   /** Real (non-generic) seller name -> product name -> quantity (used for campaign matching). */

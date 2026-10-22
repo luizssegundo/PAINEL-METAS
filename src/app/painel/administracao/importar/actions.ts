@@ -140,7 +140,11 @@ export async function importReport(formData: FormData) {
   }
 
   const revenueWithFee =
-    parsed.totalRevenue !== null ? Math.round(parsed.totalRevenue * (1 + SERVICE_FEE_RATE) * 100) / 100 : null;
+    parsed.totalRevenue === null
+      ? null
+      : parsed.revenueIncludesServiceFee
+        ? parsed.totalRevenue
+        : Math.round(parsed.totalRevenue * (1 + SERVICE_FEE_RATE) * 100) / 100;
 
   if (revenueWithFee !== null) {
     const { data: existingActual } = await supabase
@@ -257,9 +261,11 @@ export async function importReport(formData: FormData) {
 
   const summaryLines = [
     `${parsed.sellerNames.size} vendedor(es) no arquivo (${newSellerNames.length} novo(s) cadastrado(s) automaticamente).`,
-    parsed.totalRevenue !== null && revenueWithFee !== null
-      ? `Faturamento realizado importado: ${formatCurrency(revenueWithFee)} (${formatCurrency(parsed.totalRevenue)} do relatório + 10% de taxa de serviço).`
-      : "Nenhuma coluna de valor encontrada — faturamento realizado não foi atualizado.",
+    parsed.totalRevenue === null || revenueWithFee === null
+      ? "Nenhuma coluna de valor encontrada — faturamento realizado não foi atualizado."
+      : parsed.revenueIncludesServiceFee
+        ? `Faturamento realizado importado: ${formatCurrency(revenueWithFee)} (taxa de serviço já incluída no relatório).`
+        : `Faturamento realizado importado: ${formatCurrency(revenueWithFee)} (${formatCurrency(parsed.totalRevenue)} do relatório + 10% de taxa de serviço).`,
     `${categoryRows.length} lançamento(s) de vendas por categoria.`,
     `${campaignRows.length} lançamento(s) de vendas de campanha.`,
   ];

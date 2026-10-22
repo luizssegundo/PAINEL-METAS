@@ -78,7 +78,8 @@ const CATEGORY_KEYWORDS: { key: CategoryKey; keywords: string[] }[] = [
   },
 ];
 
-const GENERIC_SELLER_PATTERN = /^(operador web|caixa-\d+|garcom-\d+)$/;
+// "garcom.pn - 15" / "caixa.pn-01" / "sem vendedor" come from Ponta Negra's ABC report.
+const GENERIC_SELLER_PATTERN = /^(operador web|(caixa|garcom)(\.pn)? ?- ?\d+|sem vendedor)$/;
 
 export function classifySubgrupo(name: string): CategoryKey | null {
   const norm = normalizeName(name);
