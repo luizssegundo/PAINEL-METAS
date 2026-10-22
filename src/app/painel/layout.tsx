@@ -28,9 +28,12 @@ export default async function PainelLayout({ children }: { children: React.React
             <span className="hidden font-mono text-[11px] uppercase tracking-wide text-yellow sm:block">
               Painel Interno
             </span>
-            <nav className="flex items-center gap-3 font-mono text-xs uppercase tracking-wide text-white/70 sm:ml-4 sm:gap-4">
+            <nav className="flex flex-wrap items-center gap-3 font-mono text-xs uppercase tracking-wide text-white/70 sm:ml-4 sm:gap-4">
               <Link href="/painel" className="hover:text-white">
                 Painel
+              </Link>
+              <Link href="/painel/dashboard" className="hover:text-white">
+                Dashboard
               </Link>
               <Link href="/painel/lancamentos" className="hover:text-white">
                 Resumo
