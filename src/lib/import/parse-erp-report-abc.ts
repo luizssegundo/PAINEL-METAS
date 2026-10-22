@@ -192,12 +192,14 @@ export function parseAbcVendasWorkbook(workbook: ExcelJS.Workbook): ParsedHierar
 const PRODUCT_CODE_RE = /^\d{14}$/;
 const QTY_RE = /^-?[\d.]+,\d{3}$/;
 const MONEY_RE = /^-?[\d.]+,\d{2}$/;
-// In the PDF text layer each product row becomes one value per line, always in this order:
+// In the PDF text layer each product row becomes one value per line, in this order:
 // custo, markup, faturamento, quantidade, imp. estadual, imp. federal, lucro, partic., acum.,
-// <código de 14 dígitos>, produto, prc. médio, margem, num. Offsets are relative to the código line.
-const PDF_REVENUE_OFFSET = -7;
-const PDF_QTY_OFFSET = -6;
-const PDF_PRODUCT_OFFSET = 1;
+// <código de 14 dígitos>, produto, prc. médio, margem, num. Large percentages sometimes wrap
+// ("2.312,50" / "%"), shifting positions, so the quantidade is located as the only 3-decimal
+// value since the last text line (product name, "Grupo:", "Total por ..."), and faturamento is
+// the value right before it. Subtotal values sit before the next "Grupo:" line, so they stay out.
+const PDF_MAX_VALUES_BEFORE_CODE = 14;
+const NUMERIC_TOKEN_RE = /^(-?[\d.,]+%?|%|-)$/;
 
 export function isAbcVendasText(lines: string[]): boolean {
   const first = lines.find((l) => l.trim());
@@ -209,22 +211,42 @@ export function parseAbcVendasLines(rawLines: string[]): ParsedHierarchicalRepor
   const acc = createAbcAccumulator();
   const lines = rawLines.map((l) => l.trim());
   let skipped = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (acc.handleHeaderText(lines[i]) || !PRODUCT_CODE_RE.test(lines[i])) continue;
+  let lastTextLine = -1;
+  let reportTotal: number | null = null;
 
-    const qtyText = lines[i + PDF_QTY_OFFSET] ?? "";
-    const revenueText = lines[i + PDF_REVENUE_OFFSET] ?? "";
-    const productName = lines[i + PDF_PRODUCT_OFFSET] ?? "";
-    if (!QTY_RE.test(qtyText) || !MONEY_RE.test(revenueText) || !productName) {
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i] === "TOTAL GERAL:" && MONEY_RE.test(lines[i - 1] ?? "")) {
+      reportTotal = parseBrNumber(lines[i - 1]);
+      continue;
+    }
+    if (!PRODUCT_CODE_RE.test(lines[i])) {
+      acc.handleHeaderText(lines[i]);
+      if (lines[i] && !NUMERIC_TOKEN_RE.test(lines[i])) lastTextLine = i;
+      continue;
+    }
+
+    const windowStart = Math.max(lastTextLine + 1, i - PDF_MAX_VALUES_BEFORE_CODE);
+    const qtyIdx: number[] = [];
+    for (let j = windowStart; j < i; j++) if (QTY_RE.test(lines[j])) qtyIdx.push(j);
+
+    const productName = lines[i + 1] ?? "";
+    const revenueText = qtyIdx.length === 1 ? lines[qtyIdx[0] - 1] ?? "" : "";
+    if (qtyIdx.length !== 1 || !MONEY_RE.test(revenueText) || !productName) {
       skipped++;
       continue;
     }
-    acc.addProduct(productName, parseBrNumber(qtyText)!, parseBrNumber(revenueText)!);
+    acc.addProduct(productName, parseBrNumber(lines[qtyIdx[0]])!, parseBrNumber(revenueText)!);
   }
+
   const result = acc.finish();
   if (skipped > 0) {
     result.warnings.push(
       `${skipped} linha(s) de produto do PDF não puderam ser lidas e ficaram fora do total — confira ou envie o relatório em .xlsx.`,
+    );
+  }
+  if (reportTotal !== null && result.totalRevenue !== null && Math.abs(reportTotal - result.totalRevenue) > 0.01) {
+    result.warnings.push(
+      `A soma dos produtos lidos (${result.totalRevenue.toFixed(2)}) difere do TOTAL GERAL do PDF (${reportTotal.toFixed(2)}) — confira ou envie o relatório em .xlsx.`,
     );
   }
   return result;

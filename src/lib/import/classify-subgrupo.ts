@@ -79,8 +79,9 @@ const CATEGORY_KEYWORDS: { key: CategoryKey; keywords: string[] }[] = [
 ];
 
 // "garcom.pn - 15" / "caixa.pn-01" / "sem vendedor" come from Ponta Negra's ABC report;
-// "caixa-01.mw" carries a unit suffix (Midway).
-const GENERIC_SELLER_PATTERN = /^(operador web|(caixa|garcom)(\.pn)? ?- ?\d+(\.[a-z]+)?|sem vendedor)$/;
+// "caixa-01.mw" carries a unit suffix (Midway). The rest are system/test logins seen in the POS exports.
+const GENERIC_SELLER_PATTERN =
+  /^(operador web|(caixa|garcom|entregador)(\.pn)? ?- ?\d+(\.[a-z]+)?|sem vendedor|master|teste|maitre(\.pn)?|proabakus|varejo facil)$/;
 
 export function classifySubgrupo(name: string): CategoryKey | null {
   const norm = normalizeName(name);
