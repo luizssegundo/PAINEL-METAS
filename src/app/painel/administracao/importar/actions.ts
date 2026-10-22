@@ -185,7 +185,8 @@ export async function importReport(formData: FormData) {
       categoryRows.push({
         seller_id: sellerId,
         category_id: categoryId,
-        items_sold: qty,
+        // Weighed items come with fractional quantities; the column stores whole items.
+        items_sold: Math.round(qty),
         ref_month: refMonth,
         source: SOURCE,
         external_ref: file.name,
@@ -258,7 +259,8 @@ export async function importReport(formData: FormData) {
       const prev = merged.get(key);
       merged.set(key, prev ? { ...row, qty_sold: prev.qty_sold + row.qty_sold } : row);
     }
-    await supabase.from("seller_campaign_sales").upsert([...merged.values()], { onConflict: "seller_id,campaign_item_id" });
+    const rows = [...merged.values()].map((row) => ({ ...row, qty_sold: Math.round(row.qty_sold) }));
+    await supabase.from("seller_campaign_sales").upsert(rows, { onConflict: "seller_id,campaign_item_id" });
   }
 
   const summaryLines = [
