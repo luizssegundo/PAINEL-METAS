@@ -80,7 +80,7 @@ export default async function LancamentosPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-2xl font-semibold text-navy">Lançamentos</h1>
+        <h1 className="font-serif text-2xl font-semibold text-navy">Resumo</h1>
         <div className="mt-1 h-0.5 w-9 bg-yellow" />
       </div>
       <div>

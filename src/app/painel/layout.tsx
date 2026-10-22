@@ -33,7 +33,7 @@ export default async function PainelLayout({ children }: { children: React.React
                 Painel
               </Link>
               <Link href="/painel/lancamentos" className="hover:text-white">
-                Lançamentos
+                Resumo
               </Link>
               {showAdminNav ? (
                 <Link href="/painel/administracao" className="hover:text-white">
