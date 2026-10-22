@@ -9,7 +9,7 @@ import { parseErpReportXlsxHierarchical } from "@/lib/import/parse-erp-report-xl
 import type { CategoryKey, ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
 import { normalizeName } from "@/lib/import/normalize";
 import { formatCurrency } from "@/lib/format";
-import { formatMonthLabel } from "@/lib/months";
+import { formatMonthLabel, isCurrentMonth } from "@/lib/months";
 
 const SOURCE = "import";
 
@@ -67,6 +67,8 @@ export async function importReport(formData: FormData) {
 
   const unit = viewer.units.find((u) => u.id === unitId && u.canEdit);
   if (!unit || !refMonth || !(file instanceof File) || file.size === 0) return;
+  // Past months are only open to admins (historical load).
+  if (!isCurrentMonth(refMonth) && !viewer.isAdmin) return;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const isPdf = file.name.toLowerCase().endsWith(".pdf");

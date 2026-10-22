@@ -18,7 +18,8 @@ export default async function ImportarPage({
   const editableUnits = viewer.units.filter((u) => u.canEdit);
   const unitId = sp.unidade ?? editableUnits[0]?.id ?? viewer.units[0]?.id;
   const unit = viewer.units.find((u) => u.id === unitId);
-  const canImport = Boolean(unit?.canEdit) && editableNow;
+  // Admins can also load past months (historical import).
+  const canImport = Boolean(unit?.canEdit) && (editableNow || viewer.isAdmin);
 
   if (!unit) {
     return <p className="text-sm text-ink-soft">Nenhuma unidade disponível para importação.</p>;
@@ -73,7 +74,7 @@ export default async function ImportarPage({
 
       {!editableNow ? (
         <span className="inline-block rounded-full bg-seafoam px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-navy">
-          Somente consulta — {formatMonthLabel(monthKey)}
+          {viewer.isAdmin ? "Carga histórica" : "Somente consulta"} — {formatMonthLabel(monthKey)}
         </span>
       ) : null}
 

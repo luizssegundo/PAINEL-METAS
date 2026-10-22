@@ -12,9 +12,9 @@ export default async function MetasPage({
 }) {
   const sp = await searchParams;
   const monthKey = sp.mes ?? currentMonthKey();
-  const readOnly = !isCurrentMonth(monthKey);
-
   const viewer = await requireViewer();
+  // Admins can also set targets for past months (historical load).
+  const readOnly = !isCurrentMonth(monthKey) && !viewer.isAdmin;
   const supabase = await createClient();
   const unitIds = viewer.units.map((u) => u.id);
 

@@ -7,7 +7,7 @@ import { recentMonths, currentMonthKey, isCurrentMonth } from "@/lib/months";
 export function HeaderMonthControls() {
   const searchParams = useSearchParams();
   const monthKey = searchParams.get("mes") ?? currentMonthKey();
-  const months = recentMonths(6);
+  const months = recentMonths(12);
 
   return (
     <div className="flex items-center gap-3">
