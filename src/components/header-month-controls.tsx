@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { MonthSelect } from "@/components/month-select";
-import { recentMonths, currentMonthKey, isCurrentMonth } from "@/lib/months";
+import { recentMonths, currentMonthKey, isCurrentMonth, acceptsReports } from "@/lib/months";
 
 export function HeaderMonthControls() {
   const searchParams = useSearchParams();
@@ -14,7 +14,7 @@ export function HeaderMonthControls() {
       <MonthSelect months={months} value={monthKey} />
       {!isCurrentMonth(monthKey) ? (
         <span className="rounded-full bg-seafoam px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-navy">
-          Somente consulta
+          {acceptsReports(monthKey) ? "Fechamento do mês até o dia 05" : "Somente consulta"}
         </span>
       ) : null}
     </div>

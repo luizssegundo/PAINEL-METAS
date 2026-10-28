@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
-import { currentMonthKey, formatMonthLabel, isCurrentMonth } from "@/lib/months";
+import { acceptsReports, currentMonthKey, formatMonthLabel, isCurrentMonth } from "@/lib/months";
 import { importReport } from "./actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
@@ -12,7 +12,8 @@ export default async function ImportarPage({
 }) {
   const sp = await searchParams;
   const monthKey = sp.mes ?? currentMonthKey();
-  const editableNow = isCurrentMonth(monthKey);
+  // Current month, or the previous one until day 5 (closing the month's results).
+  const editableNow = acceptsReports(monthKey);
 
   const viewer = await requireViewer();
   const editableUnits = viewer.units.filter((u) => u.canEdit);
@@ -72,9 +73,10 @@ export default async function ImportarPage({
         </div>
       </div>
 
-      {!editableNow ? (
+      {!isCurrentMonth(monthKey) ? (
         <span className="inline-block rounded-full bg-seafoam px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide text-navy">
-          {viewer.isAdmin ? "Carga histórica" : "Somente consulta"} — {formatMonthLabel(monthKey)}
+          {editableNow ? "Fechamento do mês (até o dia 05)" : viewer.isAdmin ? "Carga histórica" : "Somente consulta"} —{" "}
+          {formatMonthLabel(monthKey)}
         </span>
       ) : null}
 
