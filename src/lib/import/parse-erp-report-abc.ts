@@ -1,7 +1,7 @@
 import type ExcelJS from "exceljs";
 import { normalizeName } from "@/lib/import/normalize";
 import { classifySubgrupo, isGenericSeller, parseBrNumber, EXCLUDE_KEYWORDS, type CategoryKey } from "@/lib/import/classify-subgrupo";
-import type { ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
+import { addProductGroups, type ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
 
 const TITLE_RE = /^relatorio de abc de vendas/;
 const PERIODO_RE = /Per[ií]odo:\s*\[(\d{2}\/\d{2}\/\d{4})\s*\S+\s*(\d{2}\/\d{2}\/\d{4})\]/i;
@@ -72,6 +72,7 @@ function subgroupName(grupo: string): string {
 function createAbcAccumulator() {
   const sellerCategoryQty = new Map<string, Map<CategoryKey, number>>();
   const sellerProductQty = new Map<string, Map<string, number>>();
+  const productGroups = new Map<string, Set<string>>();
   const sellerNames = new Set<string>();
   const genericSellerNames = new Set<string>();
   const unmappedSubgrupos = new Set<string>();
@@ -83,6 +84,8 @@ function createAbcAccumulator() {
   let currentSeller: string | null = null;
   let currentSellerIsGeneric = false;
   let currentSubgroup = "";
+  /** Every level of the "001 - COZINHA >> 03 - PRATOS" path, without the codes. */
+  let currentGroupPath: string[] = [];
   let currentCategory: CategoryKey | null = null;
 
   return {
@@ -104,6 +107,10 @@ function createAbcAccumulator() {
       }
       if (text.startsWith("Grupo:")) {
         currentSubgroup = subgroupName(text.slice("Grupo:".length));
+        currentGroupPath = text
+          .slice("Grupo:".length)
+          .split(">>")
+          .map((part) => part.trim().replace(SELLER_CODE_RE, ""));
         currentCategory = classifySubgrupo(currentSubgroup);
         return true;
       }
@@ -136,6 +143,7 @@ function createAbcAccumulator() {
       if (!sellerProductQty.has(currentSeller)) sellerProductQty.set(currentSeller, new Map());
       const prodMap = sellerProductQty.get(currentSeller)!;
       prodMap.set(productName, (prodMap.get(productName) ?? 0) + qty);
+      addProductGroups(productGroups, productName, ...currentGroupPath);
     },
 
     finish(): ParsedHierarchicalReport {
@@ -155,6 +163,7 @@ function createAbcAccumulator() {
         revenueIncludesServiceFee: true,
         sellerCategoryQty,
         sellerProductQty,
+        productGroups,
         sellerNames,
         genericSellerNames,
         unmappedSubgrupos,

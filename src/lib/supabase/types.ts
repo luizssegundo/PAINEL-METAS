@@ -471,6 +471,7 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          xmenu_store_id: string | null
         }
         Insert: {
           active?: boolean
@@ -478,6 +479,7 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
+          xmenu_store_id?: string | null
         }
         Update: {
           active?: boolean
@@ -485,6 +487,7 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
+          xmenu_store_id?: string | null
         }
         Relationships: []
       }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireViewer } from "@/lib/viewer";
 import { createClient } from "@/lib/supabase/server";
 import { acceptsReports, currentMonthKey, formatMonthLabel, isCurrentMonth } from "@/lib/months";
-import { importReport } from "./actions";
+import { importReport, pullFromXmenu } from "./actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 
 export default async function ImportarPage({
@@ -27,6 +27,9 @@ export default async function ImportarPage({
   }
 
   const supabase = await createClient();
+  const { data: unitRow } = await supabase.from("units").select("xmenu_store_id").eq("id", unit.id).maybeSingle();
+  const hasXmenu = Boolean(unitRow?.xmenu_store_id?.trim());
+
   const { data: lastImport } = await supabase
     .from("audit_log")
     .select("created_at, actor_id, new_value")
@@ -94,6 +97,23 @@ export default async function ImportarPage({
         ) : (
           <p className="mt-2 text-sm text-ink-soft">Nenhuma importação registrada para {formatMonthLabel(monthKey)} ainda.</p>
         )}
+
+        {canImport && hasXmenu ? (
+          <form action={pullFromXmenu} className="mt-4 rounded-md border border-border-navy p-3">
+            <input type="hidden" name="unitId" value={unit.id} />
+            <input type="hidden" name="refMonth" value={monthKey} />
+            <p className="text-xs text-ink-soft">
+              Integração com o Xmenu ativa: as vendas dos caixas fechados são puxadas automaticamente todo dia de
+              manhã. Use o botão para atualizar agora.
+            </p>
+            <ConfirmSubmitButton
+              confirmMessage={`Puxar as vendas de ${formatMonthLabel(monthKey)} do Xmenu para ${unit.name}? Os dados de vendedores, faturamento e vendas do mês serão atualizados.`}
+              className="mt-2 rounded-md bg-navy px-4 py-1.5 text-sm font-bold text-white"
+            >
+              Puxar do Xmenu
+            </ConfirmSubmitButton>
+          </form>
+        ) : null}
 
         {canImport ? (
           <form action={importReport} className="mt-4 flex flex-wrap items-end gap-3">

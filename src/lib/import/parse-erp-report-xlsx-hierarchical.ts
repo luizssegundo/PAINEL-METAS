@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { normalizeName } from "@/lib/import/normalize";
 import { classifySubgrupo, isGenericSeller, parseBrNumber, EXCLUDE_KEYWORDS, type CategoryKey } from "@/lib/import/classify-subgrupo";
-import type { ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
+import { addProductGroups, type ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
 import { isAbcVendasWorkbook, parseAbcVendasWorkbook } from "@/lib/import/parse-erp-report-abc";
 
 export type { CategoryKey, ParsedHierarchicalReport } from "@/lib/import/parse-erp-report-hierarchical";
@@ -19,6 +19,9 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
   const warnings: string[] = [];
   const sellerCategoryQty = new Map<string, Map<CategoryKey, number>>();
   const sellerProductQty = new Map<string, Map<string, number>>();
+  const productGroups = new Map<string, Set<string>>();
+  let currentGrupo = "";
+  let currentSubgrupo = "";
   const sellerNames = new Set<string>();
   const genericSellerNames = new Set<string>();
   const unmappedSubgrupos = new Set<string>();
@@ -54,16 +57,21 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
         if (currentSellerIsGeneric) genericSellerNames.add(currentSeller);
         else sellerNames.add(currentSeller);
         currentCategory = null;
+        currentGrupo = "";
+        currentSubgrupo = "";
         continue;
       }
 
       if (aText.startsWith("Grupo:")) {
         currentCategory = null;
+        currentGrupo = aText.slice("Grupo:".length).trim();
+        currentSubgrupo = "";
         continue;
       }
 
       if (aText.startsWith("Subgrupo:")) {
         const subName = aText.slice("Subgrupo:".length).trim();
+        currentSubgrupo = subName;
         currentCategory = classifySubgrupo(subName);
         if (currentCategory === null && !EXCLUDE_KEYWORDS.some((k) => normalizeName(subName).includes(k))) {
           unmappedSubgrupos.add(subName);
@@ -92,6 +100,7 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
       if (!sellerProductQty.has(currentSeller)) sellerProductQty.set(currentSeller, new Map());
       const prodMap = sellerProductQty.get(currentSeller)!;
       prodMap.set(productName, (prodMap.get(productName) ?? 0) + qty);
+      addProductGroups(productGroups, productName, currentGrupo, currentSubgrupo);
     }
   }
 
@@ -110,6 +119,7 @@ export async function parseErpReportXlsxHierarchical(buffer: Buffer): Promise<Pa
     totalRevenue: rowsRead > 0 ? totalRevenue : null,
     sellerCategoryQty,
     sellerProductQty,
+    productGroups,
     sellerNames,
     genericSellerNames,
     unmappedSubgrupos,

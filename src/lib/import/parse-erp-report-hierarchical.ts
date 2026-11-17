@@ -13,6 +13,12 @@ export type ParsedHierarchicalReport = {
   sellerCategoryQty: Map<string, Map<CategoryKey, number>>;
   /** Real (non-generic) seller name -> product name -> quantity (used for campaign matching). */
   sellerProductQty: Map<string, Map<string, number>>;
+  /**
+   * Product name -> report Grupo/Subgrupo names it was listed under (e.g. "VINHOS TINTOS",
+   * "CARTA DE VINHOS"). Lets "grupo de produtos" campaigns match products whose own name
+   * doesn't mention the group, like wine labels.
+   */
+  productGroups: Map<string, Set<string>>;
   /** Distinct real seller names found. */
   sellerNames: Set<string>;
   /** Distinct generic account names found (excluded from vendedores, still count toward revenue). */
@@ -30,6 +36,21 @@ const SUBGRUPO_RE = new RegExp(`^Subgrupo:\\s*(.+?)\\s+${NUM}\\s+R\\$`, "i");
 const PRODUCT_RE = new RegExp(`^\\d+\\s+(.+)\\s+(${NUM})\\s+(${NUM})\\s+\\S+$`);
 const DATA_CAIXA_RE = /^Data Caixa:\s*(\d{2}\/\d{2}\/\d{4})/i;
 
+/** Records the Grupo/Subgrupo names a product appeared under (blank names are ignored). */
+export function addProductGroups(
+  productGroups: Map<string, Set<string>>,
+  productName: string,
+  ...groupNames: (string | null | undefined)[]
+): void {
+  let set = productGroups.get(productName);
+  for (const raw of groupNames) {
+    const name = raw?.trim();
+    if (!name) continue;
+    if (!set) productGroups.set(productName, (set = new Set()));
+    set.add(name);
+  }
+}
+
 /**
  * Parses the "Atendente: / Grupo: / Subgrupo: / <código> <produto> <qtd> <valor> <unidade>"
  * hierarchical report as extracted from a PDF text layer (one logical line per array entry).
@@ -38,6 +59,9 @@ export function parseHierarchicalLines(lines: Iterable<string>): ParsedHierarchi
   const warnings: string[] = [];
   const sellerCategoryQty = new Map<string, Map<CategoryKey, number>>();
   const sellerProductQty = new Map<string, Map<string, number>>();
+  const productGroups = new Map<string, Set<string>>();
+  let currentGrupo = "";
+  let currentSubgrupo = "";
   const sellerNames = new Set<string>();
   const genericSellerNames = new Set<string>();
   const unmappedSubgrupos = new Set<string>();
@@ -69,17 +93,23 @@ export function parseHierarchicalLines(lines: Iterable<string>): ParsedHierarchi
       if (currentSellerIsGeneric) genericSellerNames.add(currentSeller);
       else sellerNames.add(currentSeller);
       currentCategory = null;
+      currentGrupo = "";
+      currentSubgrupo = "";
       continue;
     }
 
-    if (GRUPO_RE.test(line)) {
+    const grupoMatch = line.match(GRUPO_RE);
+    if (grupoMatch) {
       currentCategory = null;
+      currentGrupo = grupoMatch[1].trim();
+      currentSubgrupo = "";
       continue;
     }
 
     const subgrupoMatch = line.match(SUBGRUPO_RE);
     if (subgrupoMatch) {
       const subName = subgrupoMatch[1].trim();
+      currentSubgrupo = subName;
       currentCategory = classifySubgrupo(subName);
       if (currentCategory === null && !EXCLUDE_KEYWORDS.some((k) => normalizeName(subName).includes(k))) {
         unmappedSubgrupos.add(subName);
@@ -114,6 +144,7 @@ export function parseHierarchicalLines(lines: Iterable<string>): ParsedHierarchi
     if (!sellerProductQty.has(currentSeller)) sellerProductQty.set(currentSeller, new Map());
     const prodMap = sellerProductQty.get(currentSeller)!;
     prodMap.set(productName, (prodMap.get(productName) ?? 0) + qty);
+    addProductGroups(productGroups, productName, currentGrupo, currentSubgrupo);
   }
 
   if (!headerFound) {
@@ -131,6 +162,7 @@ export function parseHierarchicalLines(lines: Iterable<string>): ParsedHierarchi
     totalRevenue: rowsRead > 0 ? totalRevenue : null,
     sellerCategoryQty,
     sellerProductQty,
+    productGroups,
     sellerNames,
     genericSellerNames,
     unmappedSubgrupos,
